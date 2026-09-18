@@ -3,14 +3,14 @@
 
 An open-source, dual-mode (Wired USB-HID + Wireless BLE-HID) biometric authentication key inspired by Viper. 
 
-Stores your credentials directly on the ESP32-S3's encrypted on-chip flash memory and automatically detects whether you are on **Windows, Linux, or macOS** to inject the correct password upon fingerprint verification.
+Stores your credentials securely on the ESP32-S3's on-chip flash memory. Unlike standard HID macros that dangerously type your password into the void if you accidentally touch them, this project features an intelligent **Lock State Sync Architecture** that completely blocks password injection when your Windows PC is unlocked, gracefully flashing yellow instead.
 
 ---
 
 ## Hardware Components
 1. **ESP32-S3 Super Mini** (or ESP32-S3 Zero/Mini)
 2. **ZW111 (HLK-ZW111)** Capacitive Fingerprint Sensor Module
-3. (Optional for wireless) Small 3.7V Li-Po battery (150mAh - 300mAh)
+3. *(Optional)* Small 3.7V Li-Po battery for wireless Bluetooth use.
 
 ---
 
@@ -30,34 +30,33 @@ Stores your credentials directly on the ESP32-S3's encrypted on-chip flash memor
 
 ---
 
-## Flashing the Firmware
+## Architecture
 
-### Option A: Using PlatformIO (Recommended)
-1. Open the project folder in VS Code with PlatformIO installed.
-2. Connect your ESP32-S3 Super Mini via USB-C.
-3. Click **Build** and **Upload**.
-
-### Option B: Using Arduino IDE
-1. Install ESP32 Board Support: `Tools -> Board -> Boards Manager -> esp32 by Espressif` (version 2.0.14 or later).
-2. Install **NimBLE-Arduino** from `Sketch -> Include Library -> Manage Libraries`.
-3. Select Board: **ESP32S3 Dev Module**.
-4. In `Tools`:
-   * **USB Mode:** `Hardware CDC and JTAG` (or `USB-OTG (TinyUSB)`)
-   * **USB CDC On Boot:** `Enabled`
-   * **Flash Mode:** `QIO 80MHz`
-   * **Partition Scheme:** `Default 4MB with spiffs`
-5. Open `firmware/src/main.cpp` and click **Upload**.
+This project requires three components to operate flawlessly:
+1. **The ESP32 Firmware** (`VipersKey/`): Handles the capacitive touch, fingerprint matching, secure storage, and HID keystroke injection (both USB and BLE).
+2. **The Windows Background Service** (`software/desktop/viper_winsvc.py`): Runs as a system service to monitor your Windows lock screen state. It sends a constant heartbeat to the ESP32 over the USB serial connection.
+3. **The Bluetooth Sync Script** (`ViperBleSync.pyw`): Because Windows prevents the `SYSTEM` account from communicating with your personal Bluetooth devices, this lightweight Python script runs in your user's Startup folder. It uses native WinRT GATT to wirelessly broadcast your lock state to the ESP32 every 3 seconds over Bluetooth.
 
 ---
 
-## Using the Device
+## Installation Guide
 
-1. Plug the device in via USB-C or connect it via Bluetooth (`Viper's Biometric Key`).
-2. Run the desktop management tool:
-   ```bash
-   cd software/desktop
-   pip install -r requirements.txt
-   python app.py
-   ```
-3. Use the desktop app to enroll your fingerprints and save your system passwords.
-4. Touch the ZW111 sensor to instantly unlock your screen, elevate terminal privileges, or enter TOTP codes!
+### 1. Flash the ESP32 Firmware
+You can flash the ESP32 using the Arduino IDE (`VipersKey/VipersKey.ino`) or PlatformIO (`firmware/src/main.cpp`). 
+- **Required Libraries:** `NimBLE-Arduino`
+- **Board Settings:** Enable `USB CDC On Boot` and select `Hardware CDC and JTAG`.
+
+### 2. Install the Windows Background Service
+This service is required to tell the ESP32 when your PC is unlocked so it doesn't accidentally leak your password into an open document.
+1. Compile the `software/ViperManager` C# desktop app, or use the provided installer in the `dist` folder.
+2. The installer will automatically set up `VipersKeyService` in Windows.
+
+### 3. Install the Bluetooth Companion Script
+If you plan to use the device wirelessly over Bluetooth, you must run the sync script.
+1. Run `InstallBleSync.bat` as your normal Windows user.
+2. It will copy `ViperBleSync.pyw` to your Startup folder and launch it in the background to ensure flawless Bluetooth lock-state syncing.
+
+### 4. Enroll Fingers and Passwords
+1. Open **ViperManager** from your Start Menu.
+2. Plug the ESP32 in via USB. The app will automatically connect and pause the background service.
+3. Follow the UI to enroll your fingerprints, set your lock screen PIN/password, and configure your TOTP secret key for 2FA.
