@@ -127,6 +127,7 @@ class ViperService(win32serviceutil.ServiceFramework):
             self.ser.close()
 
     def send_state(self):
+        # 1. Send over USB Serial if available
         if self.ser and self.ser.is_open:
             cmd = b"CMD:LOCK\n" if self.lock_state else b"CMD:UNLOCK\n"
             try:
@@ -134,6 +135,41 @@ class ViperService(win32serviceutil.ServiceFramework):
                 self.ser.flush()
             except Exception as e:
                 pass
+                
+        # 2. Broadcast over BLE GATT using WinRT
+        try:
+            import asyncio
+            from winrt.windows.devices.bluetooth.genericattributeprofile import GattDeviceService
+            from winrt.windows.devices.enumeration import DeviceInformation
+            from winrt.windows.storage.streams import DataWriter
+            
+            async def do_ble_sync():
+                try:
+                    devices = await DeviceInformation.find_all_async()
+                    target_id = None
+                    for d in devices:
+                        if d.name and "Viper" in d.name and "19b10000" in d.id:
+                            target_id = d.id
+                            break
+                    if not target_id: return
+                    
+                    service = await GattDeviceService.from_id_async(target_id)
+                    if not service: return
+                    
+                    chars = await service.get_characteristics_async()
+                    for c in chars.characteristics:
+                        if "19b10001" in str(c.uuid).lower():
+                            writer = DataWriter()
+                            cmd = "CMD:LOCK\n" if self.lock_state else "CMD:UNLOCK\n"
+                            writer.write_string(cmd)
+                            await c.write_value_async(writer.detach_buffer())
+                            break
+                except Exception:
+                    pass
+                    
+            asyncio.run(do_ble_sync())
+        except ImportError:
+            pass
 
     def serial_worker(self):
         preferred_vids = [0x303a, 0x2341, 0x1A86] # ESP32, Arduino, CH340

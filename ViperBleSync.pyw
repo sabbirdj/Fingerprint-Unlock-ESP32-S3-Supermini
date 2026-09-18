@@ -4,10 +4,9 @@ import win32con
 import win32gui
 import win32ts
 import sys
-from bleak import BleakClient
-
-MAC_ADDRESS = "E0:72:A1:E9:F4:6D"
-CHAR_UUID = "19B10001-E8F2-537E-4F6C-D104768A1214"
+from winrt.windows.devices.bluetooth.genericattributeprofile import GattDeviceService
+from winrt.windows.devices.enumeration import DeviceInformation
+from winrt.windows.storage.streams import DataWriter
 
 lock_state = False
 state_changed = True
@@ -23,23 +22,40 @@ def wndproc(hwnd, msg, wparam, lparam):
             state_changed = True
     return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
+async def write_gatt_state():
+    try:
+        devices = await DeviceInformation.find_all_async()
+        target_id = None
+        for d in devices:
+            if "Viper" in d.name and "19b10000" in d.id:
+                target_id = d.id
+                break
+                
+        if not target_id:
+            return
+            
+        service = await GattDeviceService.from_id_async(target_id)
+        if not service:
+            return
+            
+        chars = await service.get_characteristics_async()
+        for c in chars.characteristics:
+            if "19b10001" in str(c.uuid).lower():
+                writer = DataWriter()
+                cmd = "CMD:LOCK\n" if lock_state else "CMD:UNLOCK\n"
+                writer.write_string(cmd)
+                await c.write_value_async(writer.detach_buffer())
+                break
+    except Exception:
+        pass
+
 async def ble_worker():
     global state_changed
     while True:
-        try:
-            async with BleakClient(MAC_ADDRESS, timeout=10.0) as client:
-                state_changed = True # Force initial sync
-                while client.is_connected:
-                    if state_changed:
-                        state_changed = False
-                        cmd = b"CMD:LOCK\n" if lock_state else b"CMD:UNLOCK\n"
-                        try:
-                            await client.write_gatt_char(CHAR_UUID, cmd, response=False)
-                        except Exception:
-                            break
-                    await asyncio.sleep(0.5)
-        except Exception:
-            await asyncio.sleep(5)
+        if state_changed:
+            state_changed = False
+            await write_gatt_state()
+        await asyncio.sleep(0.5)
 
 async def main():
     wc = win32gui.WNDCLASS()
@@ -49,6 +65,10 @@ async def main():
     class_atom = win32gui.RegisterClass(wc)
     hwnd = win32gui.CreateWindow(class_atom, "ViperBleSync", 0, 0, 0, 0, 0, 0, 0, wc.hInstance, None)
     win32ts.WTSRegisterSessionNotification(hwnd, win32ts.NOTIFY_FOR_THIS_SESSION)
+    
+    # Sync initial state on startup
+    global state_changed
+    state_changed = True
     
     asyncio.create_task(ble_worker())
     
