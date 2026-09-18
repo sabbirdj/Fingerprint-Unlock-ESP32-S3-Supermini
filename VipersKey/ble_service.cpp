@@ -156,16 +156,19 @@ void BleManager::loop() {
 }
 
 void BleManager::handleOsSync(const String& data) {
-    if (data.equalsIgnoreCase("WIN") || data.equalsIgnoreCase("WINDOWS")) {
+    String cleanData = data;
+    cleanData.trim();
+    
+    if (cleanData.equalsIgnoreCase("WIN") || cleanData.equalsIgnoreCase("WINDOWS")) {
         _storage.setActiveOS(OS_WINDOWS);
         notifyStatus("ACTIVE_OS:WINDOWS");
-    } else if (data.equalsIgnoreCase("LIN") || data.equalsIgnoreCase("LINUX")) {
+    } else if (cleanData.equalsIgnoreCase("LIN") || cleanData.equalsIgnoreCase("LINUX")) {
         _storage.setActiveOS(OS_LINUX);
         notifyStatus("ACTIVE_OS:LINUX");
-    } else if (data.equalsIgnoreCase("MAC") || data.equalsIgnoreCase("MACOS")) {
+    } else if (cleanData.equalsIgnoreCase("MAC") || cleanData.equalsIgnoreCase("MACOS")) {
         _storage.setActiveOS(OS_MACOS);
         notifyStatus("ACTIVE_OS:MACOS");
-    } else if (data.equalsIgnoreCase("LOCK") || data.equalsIgnoreCase("CMD:LOCK")) {
+    } else if (cleanData.equalsIgnoreCase("LOCK") || cleanData.equalsIgnoreCase("CMD:LOCK")) {
         extern bool isWindowsLocked;
         extern bool guardActive;
         extern uint32_t lastGuardHeartbeat;
@@ -174,7 +177,7 @@ void BleManager::handleOsSync(const String& data) {
         lastGuardHeartbeat = millis();
         notifyStatus("GUARD:LOCKED");
         Serial.println("[BLE] Guard ARMED via BLE - typing ENABLED");
-    } else if (data.equalsIgnoreCase("UNLOCK") || data.equalsIgnoreCase("CMD:UNLOCK")) {
+    } else if (cleanData.equalsIgnoreCase("UNLOCK") || cleanData.equalsIgnoreCase("CMD:UNLOCK")) {
         extern bool isWindowsLocked;
         extern bool guardActive;
         extern uint32_t lastGuardHeartbeat;
