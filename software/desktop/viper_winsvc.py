@@ -171,6 +171,21 @@ class ViperService(win32serviceutil.ServiceFramework):
         except ImportError:
             pass
 
+    def heartbeat_worker(self):
+        while self.is_running:
+            if not self.ui_connected:
+                self.send_state()
+                
+                # Sync time
+                if self.ser and self.ser.is_open:
+                    unix_time = int(time.time())
+                    try:
+                        self.ser.write(f"CMD:TIME:{unix_time}\n".encode('utf-8'))
+                        self.ser.flush()
+                    except Exception:
+                        pass
+            time.sleep(3.0)
+
     def serial_worker(self):
         preferred_vids = [0x303a, 0x2341, 0x1A86] # ESP32, Arduino, CH340
         while self.is_running:
@@ -178,50 +193,39 @@ class ViperService(win32serviceutil.ServiceFramework):
                 time.sleep(1)
                 continue
                 
-            try:
-                ports = serial.tools.list_ports.comports()
-                target_port = None
+            ports = list(serial.tools.list_ports.comports())
+            target_port = None
+            
+            # Find the best port based on known VIDs
+            for port in ports:
+                if port.vid in preferred_vids:
+                    target_port = port.device
+                    break
+            
+            if not target_port and ports:
+                target_port = ports[0].device
                 
-                for p in ports:
-                    if p.vid in preferred_vids or "COM5" in p.device:
-                        target_port = p.device
-                        break
-                        
-                if target_port:
-                    self.ser = serial.Serial(target_port, 115200, timeout=1, write_timeout=1)
-                    self.ser.dtr = True
-                    self.ser.rts = True
-                    time.sleep(1)
-                    
+            if target_port:
+                try:
+                    self.ser = serial.Serial(target_port, 115200, timeout=1)
                     servicemanager.LogInfoMsg(f"Viper: Connected to {target_port}")
-                    self.send_state()
                     
-                    # Sync initial time
+                    # Sync initial state and time
+                    self.send_state()
                     unix_time = int(time.time())
                     self.ser.write(f"CMD:TIME:{unix_time}\n".encode('utf-8'))
                     self.ser.flush()
                     
-                    last_sync = time.time()
-                    
                     while self.is_running and self.ser and self.ser.is_open and not self.ui_connected:
                         try:
-                            # Periodic sync (every 2s) to guarantee ESP32 never misses a state change
-                            if time.time() - last_sync > 2.0:
-                                self.send_state()
-                                unix_time = int(time.time())
-                                self.ser.write(f"CMD:TIME:{unix_time}\n".encode('utf-8'))
-                                self.ser.flush()
-                                last_sync = time.time()
-
-                            if self.ser.in_waiting:
-                                data = self.ser.readline()
-                                # We can ignore output for the background service
-                            else:
-                                time.sleep(0.1)
-                        except serial.SerialException:
+                            # Serial loop just reads incoming lines now
+                            line = self.ser.readline().decode('utf-8').strip()
+                            if line:
+                                pass # Process incoming commands here if needed
+                        except Exception:
                             break
-            except Exception as e:
-                pass
+                except Exception as e:
+                    pass
             
             if self.ser:
                 try:
@@ -241,6 +245,11 @@ class ViperService(win32serviceutil.ServiceFramework):
         t = threading.Thread(target=self.serial_worker)
         t.daemon = True
         t.start()
+        
+        # Start heartbeat thread
+        t3 = threading.Thread(target=self.heartbeat_worker)
+        t3.daemon = True
+        t3.start()
         
         # Start socket server thread for UI override
         t2 = threading.Thread(target=self.socket_server)
