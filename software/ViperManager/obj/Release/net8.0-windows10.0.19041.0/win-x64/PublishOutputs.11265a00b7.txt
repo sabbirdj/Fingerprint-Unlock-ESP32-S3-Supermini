@@ -1,5 +1,0 @@
-C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\publish-test\ViperManager.pdb
-C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\publish-test\av_libglesv2.dll
-C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\publish-test\libHarfBuzzSharp.dll
-C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\publish-test\libSkiaSharp.dll
-C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\publish-test\ViperManager.exe
