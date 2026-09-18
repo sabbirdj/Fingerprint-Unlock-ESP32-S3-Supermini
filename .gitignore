@@ -1,0 +1,4 @@
+﻿software/ViperManager/bin/
+software/ViperManager/obj/
+*.pyc
+__pycache__/

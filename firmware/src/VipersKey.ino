@@ -63,11 +63,11 @@ void setup() {
     }
 
     // 4. Initialize BLE Services
-    // ble.begin();
-    // ble.setCommandCallback([](const String& cmd) {
-    //     processSerialCommand(cmd);
-    // });
-    // Serial.println("[BLE] Advertising as 'Viper's Biometric Key'. Ready to pair.");
+    ble.begin();
+    ble.setCommandCallback([](const String& cmd) {
+        processSerialCommand(cmd);
+    });
+    Serial.println("[BLE] Advertising as 'Viper's Biometric Key'. Ready to pair.");
 }
 
 // Lock Guard: Managed by desktop service/app. If guard is active, disarms on desktop.
@@ -77,7 +77,7 @@ uint32_t lastGuardHeartbeat = 0;
 
 void sendResponse(const String& msg) {
     Serial.println(msg);
-    // ble.notifyStatus(msg);
+    ble.notifyStatus(msg);
 }
 
 void processSerialCommand(const String& cmd) {
@@ -86,7 +86,7 @@ void processSerialCommand(const String& cmd) {
         Serial.printf("Enrolling finger to slot %d...\n", slot);
         bool ok = sensor.enrollFingerprint(slot, [](const char* step) {
             Serial.printf("[Enroll] %s\n", step);
-            // ble.notifyStatus(String("[Enroll] ") + step);
+            ble.notifyStatus(String("[Enroll] ") + step);
         });
         sendResponse(ok ? "Enroll SUCCESS" : "Enroll FAILED");
     } else if (cmd.startsWith("DELETE:") || cmd.startsWith("CMD:DELETE:")) {
@@ -157,6 +157,7 @@ void processSerialCommand(const String& cmd) {
         bool authSuccess = false;
         uint32_t timeout = millis() + 30000;
         while (millis() < timeout) {
+            ble.loop();
             if (sensor.isTouchDetected()) {
                 if (sensor.scanAndMatch() > 0) {
                     authSuccess = true;
@@ -183,6 +184,7 @@ void processSerialCommand(const String& cmd) {
         bool authSuccess = false;
         uint32_t timeout = millis() + 30000;
         while (millis() < timeout) {
+            ble.loop();
             if (sensor.isTouchDetected()) {
                 if (sensor.scanAndMatch() > 0) {
                     authSuccess = true;
@@ -219,7 +221,7 @@ void processSerialCommand(const String& cmd) {
                  isWindowsLocked ? "ARMED (Locked)" : "DISARMED (Unlocked)",
                  guardActive ? "YES" : "STANDALONE",
                  hid.isUsbReady() ? "YES" : "NO",
-                 "DISABLED",
+                 ble.isConnected() ? "CONNECTED" : "DISCONNECTED",
                  sensor.getFingerprintCount());
         sendResponse(String(buf));
     }
@@ -227,7 +229,7 @@ void processSerialCommand(const String& cmd) {
 
 void loop() {
     // 1. Process BLE GATT tasks
-    // ble.loop();
+    ble.loop();
 
     // 2. Check if host guard timed out (e.g. app closed)
     if (guardActive && (millis() - lastGuardHeartbeat > 7000)) {
@@ -294,7 +296,7 @@ void loop() {
 
                     if (canType) {
                         Serial.printf("[Auth] Verified! Unlocking (Profile %d, Transport: %s)...\n",
-                                      action, "USB");
+                                      action, hid.isBleConnected() ? "BLE" : "USB");
                         hid.typeString(password, true); // Password -> Enter
                         
                         if (guardActive) {
