@@ -1,0 +1,6 @@
+﻿@echo off
+echo Installing Viper BLE Sync to Startup...
+copy /Y ViperBleSync.pyw "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ViperBleSync.pyw"
+echo Starting ViperBleSync...
+start "" "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ViperBleSync.pyw"
+echo Done!

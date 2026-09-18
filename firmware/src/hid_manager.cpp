@@ -159,13 +159,15 @@ void HIDManager::sendBleString(const String& str, bool pressEnter) {
     if (!_inputReport || !_bleConnected) return;
 
     if (pressEnter) {
-        // Safe lock screen wake: Space key reveals the password field on Windows 11
-        // We DO NOT use Win+L or Ctrl+A over BLE, because the ESP32 doesn't know the lock state over BLE.
-        // If we used Win+L, accidental touches on the desktop would log the user out.
-        // If we used Ctrl+A, accidental touches would delete their documents.
-        // This safe macro mimics a YubiKey: it just types.
+        // Wake lock screen and focus password field (Space -> Ctrl+A+BS)
         sendBleKey(0, 0x2C); // Space (0x2C)
         delay(500); // Wait for Windows password field animation to focus
+
+        // Ctrl+A -> Backspace to clear any garbage keystrokes
+        sendBleKey(0x01, 0x04); // Left Ctrl (0x01) + 'a' (0x04)
+        delay(50);
+        sendBleKey(0, 0x2A); // Backspace (0x2A)
+        delay(50);
     }
 
     // Type password keystrokes with solid BLE connection intervals
