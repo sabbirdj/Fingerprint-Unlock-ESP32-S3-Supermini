@@ -183,6 +183,27 @@ void HIDManager::typeString(const String& str, bool pressEnter) {
 
     // 2. Otherwise fallback to native USB typing if USB is enumerated
     if (isUsbReady()) {
+        if (pressEnter) {
+            // Wake lock screen and focus password field (Win+L -> Space -> Ctrl+A+BS)
+            _usbKeyboard.press(KEY_LEFT_GUI);
+            _usbKeyboard.press('l');
+            delay(50);
+            _usbKeyboard.releaseAll();
+            delay(300); // Wait for lock screen
+            
+            _usbKeyboard.write(' '); // Space to wake lock screen field
+            delay(500); // Wait for animation
+
+            // Ctrl+A -> Backspace to clear any garbage keystrokes
+            _usbKeyboard.press(KEY_LEFT_CTRL);
+            _usbKeyboard.press('a');
+            delay(50);
+            _usbKeyboard.releaseAll();
+            delay(50);
+            _usbKeyboard.write(KEY_BACKSPACE);
+            delay(50);
+        }
+
         // Type the password with small delays so Windows never drops keystrokes
         for (size_t i = 0; i < str.length(); i++) {
             _usbKeyboard.write(str[i]);
