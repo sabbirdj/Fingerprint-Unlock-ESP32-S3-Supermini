@@ -87,6 +87,10 @@ void BleManager::begin() {
         NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
     );
 
+    // MUST start the services!
+    _pHidDev->startServices();
+    pService->start();
+
     // Setup Advertising for Windows 10/11 Bluetooth Keyboard Discovery
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->setAppearance(0x03C1); // HID_KEYBOARD
