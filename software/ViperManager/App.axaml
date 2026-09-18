@@ -1,0 +1,23 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ViperManager.App"
+             RequestedThemeVariant="Dark">
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+
+  <Application.Resources>
+    <SolidColorBrush x:Key="AppBgBrush" Color="#0a0e17" />
+    <SolidColorBrush x:Key="CardBgBrush" Color="#131b2e" />
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#1a243d" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#222f4c" />
+    <SolidColorBrush x:Key="SidebarBgBrush" Color="#0e1526" />
+    <SolidColorBrush x:Key="AccentBlueBrush" Color="#3b82f6" />
+    <SolidColorBrush x:Key="AccentGreenBrush" Color="#10b981" />
+    <SolidColorBrush x:Key="AccentAmberBrush" Color="#f59e0b" />
+    <SolidColorBrush x:Key="AccentRedBrush" Color="#ef4444" />
+    <SolidColorBrush x:Key="AccentPurpleBrush" Color="#8b5cf6" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#f8fafc" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94a3b8" />
+  </Application.Resources>
+</Application>

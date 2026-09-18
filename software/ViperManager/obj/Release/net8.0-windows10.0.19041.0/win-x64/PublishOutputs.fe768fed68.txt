@@ -1,0 +1,2 @@
+C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\dist\ViperManager-Portable\ViperManager.pdb
+C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\dist\ViperManager-Portable\ViperManager.exe

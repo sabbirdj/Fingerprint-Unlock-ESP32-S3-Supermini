@@ -1,0 +1,549 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:ViperManager.Models"
+        x:Class="ViperManager.MainWindow"
+        Title="Viper Biometric Key"
+        Width="1120" Height="760"
+        MinWidth="960" MinHeight="640"
+        TransparencyLevelHint="Mica, AcrylicBlur"
+        Background="#0F131C"
+        Foreground="#F3F4F6"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="40"
+        WindowStartupLocation="CenterScreen">
+
+  <Window.Styles>
+    <!-- Windows 11 Settings Card -->
+    <Style Selector="Border.SettingsCard">
+      <Setter Property="Background" Value="#181D28" />
+      <Setter Property="BorderBrush" Value="#252D3D" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="20,16" />
+    </Style>
+
+    <Style Selector="Border.SettingsCardSub">
+      <Setter Property="Background" Value="#121620" />
+      <Setter Property="BorderBrush" Value="#202736" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="16,14" />
+    </Style>
+
+    <!-- Windows 11 Accent Primary Button -->
+    <Style Selector="Button.Accent">
+      <Setter Property="Background" Value="#0067C0" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="18,8" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.Accent:pointerover">
+      <Setter Property="Background" Value="#1879CD" />
+    </Style>
+
+    <!-- Windows 11 Standard Button -->
+    <Style Selector="Button.Standard">
+      <Setter Property="Background" Value="#202634" />
+      <Setter Property="Foreground" Value="#E2E8F0" />
+      <Setter Property="BorderBrush" Value="#313A4D" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.Standard:pointerover">
+      <Setter Property="Background" Value="#283142" />
+    </Style>
+
+    <!-- Windows 11 Danger Button -->
+    <Style Selector="Button.Danger">
+      <Setter Property="Background" Value="#2D191E" />
+      <Setter Property="Foreground" Value="#F87171" />
+      <Setter Property="BorderBrush" Value="#4C242C" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.Danger:pointerover">
+      <Setter Property="Background" Value="#3D2027" />
+    </Style>
+
+    <!-- Windows 11 Nav Item -->
+    <Style Selector="Button.Nav">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#94A3B8" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Height" Value="40" />
+    </Style>
+    <Style Selector="Button.Nav:pointerover">
+      <Setter Property="Background" Value="#161C28" />
+      <Setter Property="Foreground" Value="#F1F5F9" />
+    </Style>
+
+    <Style Selector="TextBox">
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Background" Value="#11151F" />
+      <Setter Property="BorderBrush" Value="#283244" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="#F8FAFC" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style Selector="ComboBox">
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Background" Value="#181D28" />
+      <Setter Property="BorderBrush" Value="#2E3748" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="#F8FAFC" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+  </Window.Styles>
+
+  <Grid>
+    <!-- Main Window Layout -->
+    <Grid RowDefinitions="Auto,Auto,*">
+
+      <!-- 1. Draggable Windows 11 Title Bar -->
+      <Border Grid.Row="0" x:Name="TitleBarHost" Background="#0C1017" Height="38" Padding="16,0,150,0" PointerPressed="OnTitleBarPointerPressed">
+        <Grid ColumnDefinitions="Auto,*">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <PathIcon Data="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm0 2.18l6 2.32v4.59c0 4.1-2.73 7.9-6 8.91-3.27-1.01-6-4.81-6-8.91V6.5l6-2.32z" Width="14" Height="14" Foreground="#60CDFF" VerticalAlignment="Center"/>
+            <TextBlock Text="Viper Biometric Key" FontWeight="SemiBold" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+          </StackPanel>
+          <Panel Grid.Column="1" Background="Transparent" />
+        </Grid>
+      </Border>
+
+      <!-- 2. Windows 11 Top Command Bar (Hardware & Connection Ribbon) -->
+      <Border Grid.Row="1" Background="#131822" BorderBrush="#1F2634" BorderThickness="0,0,0,1" Padding="24,12">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+          <!-- Device Info & Status Pill -->
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Border Background="#1C2433" BorderBrush="#283448" BorderThickness="1" CornerRadius="6" Padding="8">
+              <PathIcon Data="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zm2.68 2.96c-.22.15-.53.08-.68-.15-.79-1.22-1.9-2.2-3.2-2.85-.25-.12-.35-.42-.23-.67.12-.25.42-.35.67-.23 1.48.74 2.74 1.86 3.63 3.23.14.23.07.53-.19.67zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="16" Height="16" Foreground="#60CDFF" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel VerticalAlignment="Center" Spacing="2">
+              <TextBlock Text="ESP32-S3 Biometric Key" FontWeight="SemiBold" FontSize="13" Foreground="#F8FAFC"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Ellipse x:Name="DotStatus" Width="6" Height="6" Fill="#EF4444" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtConnStatus" Text="Disconnected" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- Spacer -->
+          <Panel Grid.Column="1" />
+
+          <!-- Host OS Badge -->
+          <Border Grid.Column="2" Background="#181E2A" BorderBrush="#252F42" BorderThickness="1" CornerRadius="6" Padding="10,5" Margin="0,0,10,0" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Host:" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
+              <TextBlock x:Name="TxtHostOs" Text="Windows 11" FontSize="11" FontWeight="SemiBold" Foreground="#E2E8F0" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Service Status Badge -->
+          <Border Grid.Column="3" Background="#181E2A" BorderBrush="#252F42" BorderThickness="1" CornerRadius="6" Padding="10,5" Margin="0,0,14,0" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Lock Guard:" FontSize="11" Foreground="#64748B" VerticalAlignment="Center"/>
+              <TextBlock x:Name="TxtServiceStatus" Text="Standby" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Port Selector & Refresh Button -->
+          <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="0,0,12,0">
+            <ComboBox x:Name="CboPorts" Width="250" PlaceholderText="Detecting Viper Key..." VerticalAlignment="Center"/>
+            <Button x:Name="BtnRefreshPorts" Classes="Standard" Padding="10,8" Click="BtnRefreshPorts_Click" ToolTip.Tip="Scan for Hardware (USB / Bluetooth LE)" VerticalAlignment="Center">
+              <PathIcon Data="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" Width="12" Height="12" Foreground="#94A3B8"/>
+            </Button>
+          </StackPanel>
+
+          <!-- Connect Button -->
+          <Button Grid.Column="5" x:Name="BtnConnect" Content="Connect Device" Classes="Accent" Click="BtnConnect_Click" VerticalAlignment="Center"/>
+        </Grid>
+      </Border>
+
+      <!-- 3. Main Body (Navigation + Content) -->
+      <Grid Grid.Row="2" ColumnDefinitions="240,*">
+
+        <!-- Left Navigation Pane -->
+        <Border Grid.Column="0" Background="#10141D" BorderBrush="#1C2330" BorderThickness="0,0,1,0" Padding="12,18">
+          <Grid RowDefinitions="*,Auto">
+            <StackPanel Grid.Row="0" Spacing="4">
+              <!-- Nav Item: OS Passwords -->
+              <Button x:Name="NavPasswords" Classes="Nav" Tag="Passwords" Click="NavButton_Click" Background="#1A2230" Foreground="#F8FAFC">
+                <Grid ColumnDefinitions="24,*">
+                  <PathIcon Grid.Column="0" Data="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" Width="15" Height="15" Foreground="#60CDFF" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="OS Credentials" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
+              </Button>
+
+              <!-- Nav Item: SSH -->
+              <Button x:Name="NavSsh" Classes="Nav" Tag="Ssh" Click="NavButton_Click">
+                <Grid ColumnDefinitions="24,*">
+                  <PathIcon Grid.Column="0" Data="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="SSH Hardware Keys" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
+              </Button>
+
+              <!-- Nav Item: TOTP -->
+              <Button x:Name="NavTotp" Classes="Nav" Tag="Totp" Click="NavButton_Click">
+                <Grid ColumnDefinitions="24,*">
+                  <PathIcon Grid.Column="0" Data="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="TOTP 2FA Vault" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
+              </Button>
+
+              <!-- Nav Item: Fingerprints -->
+              <Button x:Name="NavFingerprints" Classes="Nav" Tag="Fingerprints" Click="NavButton_Click">
+                <Grid ColumnDefinitions="24,*">
+                  <PathIcon Grid.Column="0" Data="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zm2.68 2.96c-.22.15-.53.08-.68-.15-.79-1.22-1.9-2.2-3.2-2.85-.25-.12-.35-.42-.23-.67.12-.25.42-.35.67-.23 1.48.74 2.74 1.86 3.63 3.23.14.23.07.53-.19.67zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="Fingerprint Studio" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
+              </Button>
+
+              <!-- Nav Item: Console -->
+              <Button x:Name="NavConsole" Classes="Nav" Tag="Console" Click="NavButton_Click">
+                <Grid ColumnDefinitions="24,*">
+                  <PathIcon Data="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" Width="15" Height="15" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" Text="Device &amp; Diagnostics" FontSize="13" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
+              </Button>
+            </StackPanel>
+
+            <!-- Footer Hardware Note -->
+            <Border Grid.Row="1" Classes="SettingsCardSub" Margin="0,10,0,0">
+              <StackPanel Spacing="3">
+                <TextBlock Text="HARDWARE STATUS" FontSize="10" FontWeight="Bold" LetterSpacing="0.5" Foreground="#64748B"/>
+                <TextBlock x:Name="TxtStatusDetail" Text="Select COM port above and click Connect." FontSize="11" Foreground="#94A3B8" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Border>
+
+        <!-- Right Viewport -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*" Background="#0A0E15">
+
+          <!-- Windows 11 In-App Notification Banner (Toast) -->
+          <Border Grid.Row="0" x:Name="BannerNotification" IsVisible="false" Background="#162A45" BorderBrush="#0067C0" BorderThickness="1" CornerRadius="6" Margin="36,16,36,0" Padding="14,10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <PathIcon Grid.Column="0" x:Name="IconNotification" Data="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" Width="14" Height="14" Foreground="#60CDFF" Margin="0,0,10,0" VerticalAlignment="Center"/>
+              <TextBlock Grid.Column="1" x:Name="TxtNotification" Text="Notification message" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+              <Button Grid.Column="2" Content="✕" Background="Transparent" Foreground="#94A3B8" BorderThickness="0" Padding="4" Click="BtnCloseNotification_Click" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+
+          <!-- Content Pages -->
+          <Border Grid.Row="1" Padding="36,24">
+            <Panel>
+
+              <!-- ==================== VIEW 1: OS PASSWORDS ==================== -->
+              <ScrollViewer x:Name="PanelPasswords" IsVisible="true">
+                <StackPanel Spacing="24" MaxWidth="820" HorizontalAlignment="Left">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="OS Credentials" FontSize="26" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="Credentials are encrypted directly on the ESP32-S3 Flash memory. The key types credentials over native USB/BLE HID keyboard." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="10">
+                    <!-- Windows Card -->
+                    <Border Classes="SettingsCard">
+                      <Grid ColumnDefinitions="*,300">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                          <TextBlock Text="Windows Login Password" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                          <TextBlock Text="Automatically types into Windows login prompt" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                          <TextBox Grid.Column="0" x:Name="TxtPassWin" PasswordChar="•" Watermark="Enter password..." Margin="0,0,8,0"/>
+                          <Button Grid.Column="1" x:Name="BtnRevealWin" Classes="Standard" Padding="10,8" Margin="0,0,8,0" Click="BtnReveal_Click" Tag="TxtPassWin" ToolTip.Tip="Show/Hide">
+                            <PathIcon x:Name="IconRevealWin" Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="14" Height="14" Foreground="#94A3B8"/>
+                          </Button>
+                          <Button Grid.Column="2" Content="Save" Classes="Accent" Padding="16,6" Click="BtnSaveWin_Click"/>
+                        </Grid>
+                      </Grid>
+                    </Border>
+
+                    <!-- macOS Card -->
+                    <Border Classes="SettingsCard">
+                      <Grid ColumnDefinitions="*,300">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                          <TextBlock Text="macOS Admin &amp; Login Password" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                          <TextBlock Text="Types on macOS login prompts and terminal sudo dialogs" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                          <TextBox Grid.Column="0" x:Name="TxtPassMac" PasswordChar="•" Watermark="Enter Mac password..." Margin="0,0,8,0"/>
+                          <Button Grid.Column="1" x:Name="BtnRevealMac" Classes="Standard" Padding="10,8" Margin="0,0,8,0" Click="BtnReveal_Click" Tag="TxtPassMac" ToolTip.Tip="Show/Hide">
+                            <PathIcon x:Name="IconRevealMac" Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="14" Height="14" Foreground="#94A3B8"/>
+                          </Button>
+                          <Button Grid.Column="2" Content="Save" Classes="Accent" Padding="16,6" Click="BtnSaveMac_Click"/>
+                        </Grid>
+                      </Grid>
+                    </Border>
+
+                    <!-- Linux Card -->
+                    <Border Classes="SettingsCard">
+                      <Grid ColumnDefinitions="*,300">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                          <TextBlock Text="Linux Sudo &amp; Desktop Password" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                          <TextBlock Text="Types on Linux display managers and terminal sudo prompts" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                          <TextBox Grid.Column="0" x:Name="TxtPassLin" PasswordChar="•" Watermark="Enter Linux password..." Margin="0,0,8,0"/>
+                          <Button Grid.Column="1" x:Name="BtnRevealLin" Classes="Standard" Padding="10,8" Margin="0,0,8,0" Click="BtnReveal_Click" Tag="TxtPassLin" ToolTip.Tip="Show/Hide">
+                            <PathIcon x:Name="IconRevealLin" Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="14" Height="14" Foreground="#94A3B8"/>
+                          </Button>
+                          <Button Grid.Column="2" Content="Save" Classes="Accent" Padding="16,6" Click="BtnSaveLin_Click"/>
+                        </Grid>
+                      </Grid>
+                    </Border>
+                  </StackPanel>
+
+                  <!-- Global Action Bar -->
+                  <Border Classes="SettingsCard" Background="#141824">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <TextBlock Text="Hardware Synchronization" FontWeight="SemiBold" FontSize="13" Foreground="#F1F5F9"/>
+                        <TextBlock Text="Synchronize active host OS and time, or write all credentials at once" FontSize="11" Foreground="#8B949E" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Sync Host &amp; Clock" Classes="Standard" Margin="0,0,10,0" Click="BtnSyncHost_Click"/>
+                      <Button Grid.Column="2" Content="Save All to Hardware" Classes="Accent" Click="BtnSaveAllPass_Click"/>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+
+              <!-- ==================== VIEW 2: SSH HARDWARE KEYS ==================== -->
+              <ScrollViewer x:Name="PanelSsh" IsVisible="false">
+                <StackPanel Spacing="24" MaxWidth="820" HorizontalAlignment="Left">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="SSH Hardware Keys" FontSize="26" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="Generate unextractable ECDSA secp256r1 keys inside the ESP32. Private keys never leave the hardware; git commits and SSH logins require a physical touch." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap"/>
+                  </StackPanel>
+
+                  <!-- Actions Card -->
+                  <Border Classes="SettingsCard">
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="Hardware Keypair Management" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                        <TextBlock Text="Generate a fresh key or read the existing public key from hardware memory" FontSize="12" Foreground="#8B949E" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Read Public Key" Classes="Standard" Margin="0,0,10,0" Click="BtnReadSshPub_Click"/>
+                      <Button Grid.Column="2" Content="Generate Keypair on Device" Classes="Accent" Click="BtnGenSsh_Click"/>
+                    </Grid>
+                  </Border>
+
+                  <!-- OpenSSH Key Export Card -->
+                  <Border Classes="SettingsCard">
+                    <StackPanel Spacing="12">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                          <TextBlock Text="OpenSSH Public Key" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                          <TextBlock Text="Standard format ready for GitHub, GitLab, and ~/.ssh/authorized_keys" FontSize="12" Foreground="#8B949E"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Copy to Clipboard" Classes="Accent" Click="BtnCopySsh_Click"/>
+                      </Grid>
+                      <TextBox x:Name="TxtOpenSshKey" IsReadOnly="true" FontFamily="Consolas, monospace" FontSize="12" Watermark="Click 'Read Public Key' or 'Generate Keypair' to fetch..."/>
+                      <StackPanel Spacing="4">
+                        <TextBlock Text="Raw NIST-P256 Point (Hex):" FontSize="11" Foreground="#64748B"/>
+                        <TextBox x:Name="TxtRawSshHex" IsReadOnly="true" FontFamily="Consolas, monospace" FontSize="11" Watermark="Raw public point hex..."/>
+                      </StackPanel>
+                    </StackPanel>
+                  </Border>
+
+                  <!-- Test Sign Card -->
+                  <Border Classes="SettingsCard">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock Text="Hardware Signature Challenge Test" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                        <TextBlock x:Name="TxtSshSignResult" Text="Sends a SHA-256 test challenge. The sensor pulses Purple and waits for your touch." FontSize="12" Foreground="#8B949E" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Test Touch &amp; Sign" Classes="Standard" Click="BtnTestSshSign_Click"/>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+
+              <!-- ==================== VIEW 3: MULTI-ACCOUNT TOTP 2FA VAULT ==================== -->
+              <ScrollViewer x:Name="PanelTotp" IsVisible="false">
+                <StackPanel Spacing="24" MaxWidth="820" HorizontalAlignment="Left">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="TOTP 2FA Vault" FontSize="26" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="Manage your 2FA accounts. Sync any account to the hardware key so a fingerprint touch automatically types its live code." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap"/>
+                  </StackPanel>
+
+                  <!-- Add New 2FA Account Card -->
+                  <Border Classes="SettingsCard">
+                    <StackPanel Spacing="12">
+                      <TextBlock Text="Add New 2FA Account" FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9"/>
+                      <Grid ColumnDefinitions="200,*,Auto">
+                        <TextBox Grid.Column="0" x:Name="TxtNewTotpName" Watermark="Account (e.g. GitHub)" Margin="0,0,10,0"/>
+                        <TextBox Grid.Column="1" x:Name="TxtNewTotpSecret" Watermark="Base32 Secret Seed (e.g. JBSWY3DPEHPK3PXP)" Margin="0,0,10,0"/>
+                        <Button Grid.Column="2" Content="Add to Vault" Classes="Accent" Click="BtnAddTotpAccount_Click"/>
+                      </Grid>
+                    </StackPanel>
+                  </Border>
+
+                  <!-- Active Synced Seed Card -->
+                  <Border Classes="SettingsCard" Background="#141926">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Hardware Active TOTP Profile" FontWeight="SemiBold" FontSize="13" Foreground="#F1F5F9"/>
+                        <TextBlock x:Name="TxtActiveHardwareTotp" Text="Active Key Seed: (None synced yet)" FontSize="11" Foreground="#8B949E"/>
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="Synced to Hardware" FontSize="11" FontWeight="SemiBold" Foreground="#60CDFF" VerticalAlignment="Center"/>
+                    </Grid>
+                  </Border>
+
+                  <!-- Saved 2FA Accounts List Header -->
+                  <TextBlock Text="Saved Authenticator Accounts" FontSize="16" FontWeight="SemiBold" Foreground="#F1F5F9" Margin="0,8,0,-12"/>
+
+                  <!-- Dynamic Accounts List -->
+                  <ItemsControl x:Name="ListTotpAccounts">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="models:TotpAccount">
+                        <Border Classes="SettingsCard" Margin="0,0,0,10">
+                          <Grid ColumnDefinitions="*,Auto,Auto">
+                            <!-- Account Info -->
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4">
+                              <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="#F8FAFC"/>
+                              <TextBlock Text="{Binding MaskedSecret}" FontFamily="Consolas, monospace" FontSize="11" Foreground="#64748B"/>
+                            </StackPanel>
+
+                            <!-- Live Code & Countdown -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="0,0,20,0">
+                              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding LiveCode}" FontSize="24" FontWeight="Bold" FontFamily="Consolas, monospace" Foreground="#34D399" LetterSpacing="2"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+                                  <ProgressBar Minimum="0" Maximum="30" Value="{Binding SecondsLeft}" Width="80" Height="4" Foreground="#34D399" VerticalAlignment="Center"/>
+                                  <TextBlock Text="{Binding CountdownText}" FontSize="10" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                </StackPanel>
+                              </StackPanel>
+                            </StackPanel>
+
+                            <!-- Actions -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                              <Button Content="Copy Code" Classes="Standard" Tag="{Binding}" Click="BtnCopyAccountCode_Click"/>
+                              <Button Content="Save to Key" Classes="Accent" Tag="{Binding}" Click="BtnSyncAccountToKey_Click"/>
+                              <Button Content="Delete" Classes="Danger" Tag="{Binding}" Click="BtnDeleteAccount_Click"/>
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </ScrollViewer>
+
+              <!-- ==================== VIEW 4: FINGERPRINT STUDIO ==================== -->
+              <ScrollViewer x:Name="PanelFingerprints" IsVisible="false">
+                <StackPanel Spacing="24" MaxWidth="820" HorizontalAlignment="Left">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="Fingerprint Studio" FontSize="26" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="6-stage iterative enrollment builds a 360-degree mathematical biometric template for fast, reliable recognition at any angle." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap"/>
+                  </StackPanel>
+
+                  <!-- Controls Card -->
+                  <Border Classes="SettingsCard">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                      <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,24,0">
+                        <TextBlock Text="Fingerprint Slot (1-40)" FontSize="12" Foreground="#8B949E"/>
+                        <NumericUpDown x:Name="NumSlot" Minimum="1" Maximum="40" Value="1" Width="110"/>
+                      </StackPanel>
+
+                      <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,16,0">
+                        <TextBlock Text="Assigned Action" FontSize="12" Foreground="#8B949E"/>
+                        <ComboBox x:Name="CboSlotAction" HorizontalAlignment="Stretch" SelectedIndex="0">
+                          <ComboBoxItem Content="Unlock Active Host OS"/>
+                          <ComboBoxItem Content="Type TOTP 2FA Code"/>
+                          <ComboBoxItem Content="Windows Login Profile"/>
+                          <ComboBoxItem Content="Linux Sudo Profile"/>
+                          <ComboBoxItem Content="macOS Profile"/>
+                        </ComboBox>
+                      </StackPanel>
+
+                      <Button Grid.Column="2" Content="Delete Slot" Classes="Danger" Margin="0,0,10,0" VerticalAlignment="Bottom" Click="BtnDeleteSlot_Click"/>
+                      <Button Grid.Column="3" Content="Start 6-Stage Enrollment" Classes="Accent" VerticalAlignment="Bottom" Click="BtnStartEnroll_Click"/>
+                    </Grid>
+                  </Border>
+
+                  <!-- 6-Stage Visual Enrollment Guide Card -->
+                  <Border Classes="SettingsCard" Padding="24">
+                    <StackPanel Spacing="16">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock x:Name="TxtEnrollStageTitle" Text="Ready to Enroll" FontSize="15" FontWeight="SemiBold" Foreground="#F1F5F9"/>
+                        <TextBlock Grid.Column="1" x:Name="TxtEnrollStepCounter" Text="Step 0 / 6" FontSize="13" FontWeight="SemiBold" Foreground="#60CDFF"/>
+                      </Grid>
+
+                      <ProgressBar x:Name="ProgEnroll" Minimum="0" Maximum="6" Value="0" Height="8" CornerRadius="4" Foreground="#0067C0"/>
+
+                      <Border x:Name="BorderEnrollGuide" Classes="SettingsCardSub" Background="#111622" BorderBrush="#202A3B" Padding="20">
+                        <StackPanel HorizontalAlignment="Center" Spacing="8">
+                          <PathIcon x:Name="IconEnrollStage" Data="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zm2.68 2.96c-.22.15-.53.08-.68-.15-.79-1.22-1.9-2.2-3.2-2.85-.25-.12-.35-.42-.23-.67.12-.25.42-.35.67-.23 1.48.74 2.74 1.86 3.63 3.23.14.23.07.53-.19.67zM12 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="36" Height="36" Foreground="#60CDFF" HorizontalAlignment="Center"/>
+                          <TextBlock x:Name="TxtEnrollInstruction" Text="Select a slot above and click 'Start 6-Stage Enrollment'." FontWeight="SemiBold" FontSize="14" Foreground="#F1F5F9" HorizontalAlignment="Center"/>
+                          <TextBlock x:Name="TxtEnrollTip" Text="The hardware will pulse Blue. Place and lift your finger 6 times at varying angles." FontSize="12" Foreground="#8B949E" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+
+              <!-- ==================== VIEW 5: DEVICE & CONSOLE ==================== -->
+              <ScrollViewer x:Name="PanelConsole" IsVisible="false">
+                <StackPanel Spacing="24" MaxWidth="820" HorizontalAlignment="Left">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="Device Diagnostics &amp; Console" FontSize="26" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="Direct serial logs and hardware diagnostics for the Viper Key." FontSize="13" Foreground="#94A3B8"/>
+                  </StackPanel>
+
+                  <!-- Diagnostics Controls Card -->
+                  <Border Classes="SettingsCard">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                      <Button Grid.Column="0" Content="Query Device Status" Classes="Standard" Margin="0,0,10,0" Click="BtnStatus_Click"/>
+                      <Button Grid.Column="1" Content="Factory Wipe Sensor" Classes="Danger" Click="BtnWipe_Click"/>
+                      <Button Grid.Column="3" Content="Clear Console" Classes="Standard" Click="BtnClearConsole_Click"/>
+                    </Grid>
+                  </Border>
+
+                  <!-- Console Output Card -->
+                  <Border Classes="SettingsCard" Padding="12">
+                    <TextBox x:Name="TxtConsole" Height="360" AcceptsReturn="true" IsReadOnly="true" FontFamily="Consolas, monospace" FontSize="12" Foreground="#34D399" Background="#0C1017" BorderThickness="0" TextWrapping="Wrap"/>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+
+            </Panel>
+          </Border>
+        </Grid>
+      </Grid>
+    </Grid>
+
+    <!-- Modal Confirmation Dialog Overlay -->
+    <Border x:Name="DialogOverlay" IsVisible="false" Background="#A0000000">
+      <Border Classes="SettingsCard" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#181E2A" BorderBrush="#3B4861" BorderThickness="1" CornerRadius="10" Padding="24">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="6">
+            <TextBlock x:Name="TxtDialogTitle" Text="Confirm Action" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC"/>
+            <TextBlock x:Name="TxtDialogMessage" Text="Are you sure you want to perform this action? This cannot be undone." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap"/>
+          </StackPanel>
+
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <Button Grid.Column="1" Content="Cancel" Classes="Standard" Margin="0,0,10,0" Click="BtnDialogCancel_Click"/>
+            <Button Grid.Column="2" x:Name="BtnDialogConfirm" Content="Confirm" Classes="Danger" Click="BtnDialogConfirm_Click"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Border>
+
+  </Grid>
+</Window>
