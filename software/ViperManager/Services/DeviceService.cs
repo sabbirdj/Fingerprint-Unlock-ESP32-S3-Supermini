@@ -7,38 +7,19 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Bluetooth.Advertisement;
-using Windows.Devices.Bluetooth.GenericAttributeProfile;
-using Windows.Devices.Enumeration;
-using Windows.Storage.Streams;
 using ViperManager.Models;
 
 namespace ViperManager.Services;
 
 public class DeviceService : IDisposable
 {
-    private static readonly Guid GattServiceUuid = Guid.Parse("19b10000-e8f2-537e-4f6c-d104768a1214");
-    private static readonly Guid GattVaultCharUuid = Guid.Parse("19b10002-e8f2-537e-4f6c-d104768a1214");
-    private static readonly Guid GattEnrollCharUuid = Guid.Parse("19b10003-e8f2-537e-4f6c-d104768a1214");
-    private static readonly Guid GattStatusCharUuid = Guid.Parse("19b10004-e8f2-537e-4f6c-d104768a1214");
-
     private SerialPort? _serial;
     private Socket? _svcSocket;
     private CancellationTokenSource? _cts;
     private readonly object _lock = new();
-    private readonly SemaphoreSlim _bleWriteLock = new(1, 1);
 
-    // BLE instances
-    private BluetoothLEDevice? _bleDevice;
-    private GattDeviceService? _bleService;
-    private GattCharacteristic? _bleVaultChar;
-    private GattCharacteristic? _bleStatusChar;
-    private GattCharacteristic? _bleEnrollChar;
-    private bool _isBle;
-
-    public bool IsConnected => _isBle ? (_bleDevice != null && _bleVaultChar != null) : (_serial?.IsOpen ?? false);
-    public bool IsBluetoothConnected => _isBle && IsConnected;
+    public bool IsConnected => _serial?.IsOpen ?? false;
+    public bool IsBluetoothConnected => false;
     public string? CurrentPort { get; private set; }
     public bool IsServiceLinked { get; private set; }
 
@@ -52,7 +33,6 @@ public class DeviceService : IDisposable
     {
         var list = new List<SerialDeviceInfo>();
 
-        // 1. Scan USB CDC Devices
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             try
@@ -80,7 +60,7 @@ public class DeviceService : IDisposable
                     list.Add(new SerialDeviceInfo
                     {
                         PortName = port,
-                        DisplayName = "Viper Biometric Key (USB)",
+                        DisplayName = "Viper Biometric Key",
                         DeviceId = devId,
                         IsCompatible = true,
                         IsBluetooth = false
@@ -101,7 +81,7 @@ public class DeviceService : IDisposable
                     list.Add(new SerialDeviceInfo
                     {
                         PortName = p,
-                        DisplayName = "Viper Biometric Key (USB)",
+                        DisplayName = "Viper Biometric Key",
                         IsCompatible = true,
                         IsBluetooth = false
                     });
@@ -109,87 +89,10 @@ public class DeviceService : IDisposable
             }
         }
 
-        // 2. Scan Bluetooth LE Devices (Windows WinRT)
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (list.Count > 1)
         {
-            try
-            {
-                // A. Check paired / known BLE devices
-                string aqs = BluetoothLEDevice.GetDeviceSelector();
-                var bleDevices = await DeviceInformation.FindAllAsync(aqs);
-                foreach (var d in bleDevices)
-                {
-                    string dName = d.Name ?? "";
-                    if (dName.Contains("Viper", StringComparison.OrdinalIgnoreCase))
-                    {
-                        list.Add(new SerialDeviceInfo
-                        {
-                            PortName = d.Id,
-                            DisplayName = "Viper Biometric Key (Bluetooth LE)",
-                            DeviceId = d.Id,
-                            IsCompatible = true,
-                            IsBluetooth = true
-                        });
-                    }
-                }
-
-                // B. Active advertisement scan to discover advertising Viper keys nearby
-                var discoveredAddresses = new HashSet<ulong>();
-                var watcher = new BluetoothLEAdvertisementWatcher
-                {
-                    ScanningMode = BluetoothLEScanningMode.Active
-                };
-                watcher.Received += (s, args) =>
-                {
-                    string advName = args.Advertisement.LocalName ?? "";
-                    if (advName.Contains("Viper", StringComparison.OrdinalIgnoreCase))
-                    {
-                        lock (discoveredAddresses)
-                        {
-                            discoveredAddresses.Add(args.BluetoothAddress);
-                        }
-                    }
-                };
-
-                try
-                {
-                    watcher.Start();
-                    await Task.Delay(1200);
-                    watcher.Stop();
-                }
-                catch { }
-
-                foreach (var addr in discoveredAddresses)
-                {
-                    if (!list.Any(x => x.IsBluetooth && x.BluetoothAddress == addr))
-                    {
-                        list.Add(new SerialDeviceInfo
-                        {
-                            PortName = $"BLE:{addr:X12}",
-                            DisplayName = "Viper Biometric Key (Bluetooth LE)",
-                            DeviceId = "",
-                            BluetoothAddress = addr,
-                            IsCompatible = true,
-                            IsBluetooth = true
-                        });
-                    }
-                }
-            }
-            catch { }
-        }
-
-        // Clean numbering if multiple devices of same type exist
-        var usbDevs = list.Where(x => !x.IsBluetooth).ToList();
-        if (usbDevs.Count > 1)
-        {
-            for (int i = 0; i < usbDevs.Count; i++)
-                usbDevs[i].DisplayName = $"Viper Biometric Key (USB) #{i + 1}";
-        }
-        var bleDevs = list.Where(x => x.IsBluetooth).ToList();
-        if (bleDevs.Count > 1)
-        {
-            for (int i = 0; i < bleDevs.Count; i++)
-                bleDevs[i].DisplayName = $"Viper Biometric Key (Bluetooth LE) #{i + 1}";
+            for (int i = 0; i < list.Count; i++)
+                list[i].DisplayName = $"Viper Biometric Key #{i + 1}";
         }
 
         return list;
@@ -203,178 +106,13 @@ public class DeviceService : IDisposable
     public async Task<bool> ConnectAsync(SerialDeviceInfo dev)
     {
         if (dev == null || !dev.IsCompatible) return false;
-
-        if (dev.IsBluetooth)
-        {
-            return await ConnectBleAsync(dev);
-        }
-        else
-        {
-            return await ConnectSerialAsync(dev.PortName);
-        }
+        return await ConnectSerialAsync(dev.PortName);
     }
 
     public async Task<bool> ConnectAsync(string portName)
     {
         if (string.IsNullOrWhiteSpace(portName)) return false;
-
-        var dev = new SerialDeviceInfo
-        {
-            PortName = portName,
-            DisplayName = "Viper Biometric Key (USB)",
-            IsCompatible = true,
-            IsBluetooth = false
-        };
-        return await ConnectAsync(dev);
-    }
-
-    private async Task<bool> ConnectBleAsync(SerialDeviceInfo dev)
-    {
-        try
-        {
-            DisconnectInternal();
-
-            BluetoothLEDevice? bleDev = null;
-            if (dev.BluetoothAddress > 0)
-            {
-                bleDev = await BluetoothLEDevice.FromBluetoothAddressAsync(dev.BluetoothAddress);
-            }
-            else if (!string.IsNullOrEmpty(dev.DeviceId))
-            {
-                bleDev = await BluetoothLEDevice.FromIdAsync(dev.DeviceId);
-            }
-
-            if (bleDev == null)
-            {
-                ConnectionStateChanged?.Invoke(false, "Could not open Bluetooth device.");
-                return false;
-            }
-
-            _bleDevice = bleDev;
-            _bleDevice.ConnectionStatusChanged += (s, e) =>
-            {
-                if (s.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
-                {
-                    Disconnect();
-                }
-            };
-
-            // Discover GATT services
-            var serviceResult = await _bleDevice.GetGattServicesForUuidAsync(GattServiceUuid, BluetoothCacheMode.Uncached);
-            if (serviceResult.Status != GattCommunicationStatus.Success || serviceResult.Services.Count == 0)
-            {
-                serviceResult = await _bleDevice.GetGattServicesForUuidAsync(GattServiceUuid, BluetoothCacheMode.Cached);
-            }
-
-            // If not found and pairing is allowed, attempt pairing
-            if ((serviceResult.Status != GattCommunicationStatus.Success || serviceResult.Services.Count == 0) &&
-                !_bleDevice.DeviceInformation.Pairing.IsPaired && _bleDevice.DeviceInformation.Pairing.CanPair)
-            {
-                var pairRes = await _bleDevice.DeviceInformation.Pairing.PairAsync(DevicePairingProtectionLevel.None);
-                if (pairRes.Status == DevicePairingResultStatus.Paired || pairRes.Status == DevicePairingResultStatus.AlreadyPaired)
-                {
-                    serviceResult = await _bleDevice.GetGattServicesForUuidAsync(GattServiceUuid, BluetoothCacheMode.Uncached);
-                }
-            }
-
-            if (serviceResult.Status != GattCommunicationStatus.Success || serviceResult.Services.Count == 0)
-            {
-                DisconnectInternal();
-                ConnectionStateChanged?.Invoke(false, "Viper Key GATT Service not found.");
-                return false;
-            }
-
-            _bleService = serviceResult.Services[0];
-
-            // Discover characteristics
-            var vaultResult = await _bleService.GetCharacteristicsForUuidAsync(GattVaultCharUuid, BluetoothCacheMode.Uncached);
-            if (vaultResult.Status != GattCommunicationStatus.Success || vaultResult.Characteristics.Count == 0)
-                vaultResult = await _bleService.GetCharacteristicsForUuidAsync(GattVaultCharUuid, BluetoothCacheMode.Cached);
-
-            if (vaultResult.Status != GattCommunicationStatus.Success || vaultResult.Characteristics.Count == 0)
-            {
-                DisconnectInternal();
-                ConnectionStateChanged?.Invoke(false, "Command Characteristic not found.");
-                return false;
-            }
-            _bleVaultChar = vaultResult.Characteristics[0];
-
-            var statusResult = await _bleService.GetCharacteristicsForUuidAsync(GattStatusCharUuid, BluetoothCacheMode.Uncached);
-            if (statusResult.Status != GattCommunicationStatus.Success || statusResult.Characteristics.Count == 0)
-                statusResult = await _bleService.GetCharacteristicsForUuidAsync(GattStatusCharUuid, BluetoothCacheMode.Cached);
-
-            if (statusResult.Status != GattCommunicationStatus.Success || statusResult.Characteristics.Count == 0)
-            {
-                DisconnectInternal();
-                ConnectionStateChanged?.Invoke(false, "Status Characteristic not found.");
-                return false;
-            }
-            _bleStatusChar = statusResult.Characteristics[0];
-
-            // Subscribe to Status notifications
-            _bleStatusChar.ValueChanged += OnBleStatusCharValueChanged;
-            try
-            {
-                await _bleStatusChar.WriteClientCharacteristicConfigurationDescriptorAsync(
-                    GattClientCharacteristicConfigurationDescriptorValue.Notify);
-            }
-            catch { }
-
-            // Also subscribe to Enroll notifications if available
-            var enrollResult = await _bleService.GetCharacteristicsForUuidAsync(GattEnrollCharUuid, BluetoothCacheMode.Uncached);
-            if (enrollResult.Status == GattCommunicationStatus.Success && enrollResult.Characteristics.Count > 0)
-            {
-                _bleEnrollChar = enrollResult.Characteristics[0];
-                _bleEnrollChar.ValueChanged += OnBleStatusCharValueChanged;
-                try
-                {
-                    await _bleEnrollChar.WriteClientCharacteristicConfigurationDescriptorAsync(
-                        GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                }
-                catch { }
-            }
-
-            _isBle = true;
-            CurrentPort = dev.DisplayName;
-
-            ConnectionStateChanged?.Invoke(true, dev.DisplayName);
-
-            // Sync Time and Host OS immediately
-            SyncTime();
-            SyncHostOs();
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            DisconnectInternal();
-            ConnectionStateChanged?.Invoke(false, $"BLE Connection error: {ex.Message}");
-            return false;
-        }
-    }
-
-    private void OnBleStatusCharValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
-    {
-        try
-        {
-            var reader = DataReader.FromBuffer(args.CharacteristicValue);
-            byte[] bytes = new byte[reader.UnconsumedBufferLength];
-            reader.ReadBytes(bytes);
-            string text = Encoding.UTF8.GetString(bytes).Trim();
-            if (string.IsNullOrEmpty(text)) return;
-
-            string[] lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var rawLine in lines)
-            {
-                string line = rawLine.Trim();
-                if (string.IsNullOrEmpty(line)) continue;
-                ProcessIncomingLine(line);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[BLE ValueChanged error] {ex.Message}");
-        }
+        return await ConnectSerialAsync(portName);
     }
 
     private async Task<bool> ConnectSerialAsync(string portName)
@@ -385,7 +123,6 @@ public class DeviceService : IDisposable
             {
                 DisconnectInternal();
 
-                // 1. On Windows, signal background service to yield COM port
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     try
@@ -397,7 +134,7 @@ public class DeviceService : IDisposable
                         };
                         _svcSocket.Connect("127.0.0.1", 44332);
                         _svcSocket.Send(Encoding.UTF8.GetBytes("OVERRIDE"));
-                        Thread.Sleep(500); // Allow service to close serial port
+                        Thread.Sleep(500); 
                         IsServiceLinked = true;
                     }
                     catch
@@ -408,14 +145,13 @@ public class DeviceService : IDisposable
                     }
                 }
 
-                // 2. Open serial connection
                 try
                 {
                     _serial = new SerialPort(portName, 115200, Parity.None, 8, StopBits.One)
                     {
                         ReadTimeout = 200,
                         WriteTimeout = 1000,
-                        DtrEnable = true, // Critical for ESP32-S3 CDC USB
+                        DtrEnable = true, 
                         RtsEnable = true
                     };
                     _serial.Open();
@@ -426,7 +162,6 @@ public class DeviceService : IDisposable
 
                     ConnectionStateChanged?.Invoke(true, portName);
 
-                    // Sync Time and Host OS immediately
                     SyncTime();
                     SyncHostOs();
 
@@ -457,30 +192,6 @@ public class DeviceService : IDisposable
         _cts?.Dispose();
         _cts = null;
 
-        if (_bleStatusChar != null)
-        {
-            try { _bleStatusChar.ValueChanged -= OnBleStatusCharValueChanged; } catch { }
-            _bleStatusChar = null;
-        }
-        if (_bleEnrollChar != null)
-        {
-            try { _bleEnrollChar.ValueChanged -= OnBleStatusCharValueChanged; } catch { }
-            _bleEnrollChar = null;
-        }
-        _bleVaultChar = null;
-
-        if (_bleService != null)
-        {
-            try { _bleService.Dispose(); } catch { }
-            _bleService = null;
-        }
-        if (_bleDevice != null)
-        {
-            try { _bleDevice.Dispose(); } catch { }
-            _bleDevice = null;
-        }
-        _isBle = false;
-
         if (_serial != null)
         {
             try
@@ -495,7 +206,6 @@ public class DeviceService : IDisposable
             _serial = null;
         }
 
-        // Release socket so background service resumes immediately
         if (_svcSocket != null)
         {
             try
@@ -516,58 +226,16 @@ public class DeviceService : IDisposable
     {
         lock (_lock)
         {
-            if (_isBle)
+            if (_serial == null || !_serial.IsOpen) return false;
+            try
             {
-                if (_bleVaultChar == null) return false;
-                try
-                {
-                    var writer = new DataWriter();
-                    writer.WriteString(command + "\n");
-                    var buffer = writer.DetachBuffer();
-                    _ = Task.Run(() => SendBleBufferAsync(buffer));
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
+                _serial.WriteLine(command);
+                return true;
             }
-            else
+            catch
             {
-                if (_serial == null || !_serial.IsOpen) return false;
-                try
-                {
-                    _serial.WriteLine(command);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
+                return false;
             }
-        }
-    }
-
-    private async Task SendBleBufferAsync(IBuffer buffer)
-    {
-        await _bleWriteLock.WaitAsync();
-        try
-        {
-            if (_bleVaultChar != null)
-            {
-                var writeOption = _bleVaultChar.CharacteristicProperties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse)
-                    ? GattWriteOption.WriteWithoutResponse
-                    : GattWriteOption.WriteWithResponse;
-                await _bleVaultChar.WriteValueAsync(buffer, writeOption);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[BLE Send Error] {ex.Message}");
-        }
-        finally
-        {
-            _bleWriteLock.Release();
         }
     }
 
@@ -599,7 +267,6 @@ public class DeviceService : IDisposable
             }
             catch (TimeoutException)
             {
-                // Expected timeout when no characters arrived within ReadTimeout
             }
             catch (Exception)
             {

@@ -81,37 +81,14 @@ public partial class MainWindow : Window
             }
         };
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
-        }
-
         // Refresh ports on launch
         RefreshPorts();
 
         Closed += (s, e) =>
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
-            }
             _guardHeartbeatTimer.Stop();
             _device.Dispose();
         };
-    }
-
-    private void OnSessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
-    {
-        if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLock)
-        {
-            _isWindowsLocked = true;
-            _device.SendCommand("CMD:LOCK");
-        }
-        else if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock)
-        {
-            _isWindowsLocked = false;
-            _device.SendCommand("CMD:UNLOCK");
-        }
     }
 
     #region Window Dragging
@@ -280,30 +257,18 @@ public partial class MainWindow : Window
                 _device.SendCommand("CMD:UNLOCK");
                 _guardHeartbeatTimer.Start();
 
-                if (_device.IsBluetoothConnected)
+                if (_device.IsServiceLinked)
                 {
-                    TxtStatusDetail.Text = "Secured wirelessly via Bluetooth Low Energy.";
-                    TxtServiceStatus.Text = "Bluetooth LE Mode";
-                    TxtServiceStatus.Foreground = new SolidColorBrush(Color.Parse("#10B981"));
-                    AppendConsole("[App] Connected to Viper Biometric Key (Bluetooth LE).");
-                    ShowNotification("Connected via Bluetooth LE.");
+                    TxtServiceStatus.Text = "Paused (Manager Open)";
+                    TxtServiceStatus.Foreground = new SolidColorBrush(Color.Parse("#F59E0B"));
                 }
                 else
                 {
-                    TxtStatusDetail.Text = "Device active and secured.";
-                    if (_device.IsServiceLinked)
-                    {
-                        TxtServiceStatus.Text = "Paused (Manager Open)";
-                        TxtServiceStatus.Foreground = new SolidColorBrush(Color.Parse("#F59E0B"));
-                    }
-                    else
-                    {
-                        TxtServiceStatus.Text = "Direct USB Mode";
-                        TxtServiceStatus.Foreground = new SolidColorBrush(Color.Parse("#60CDFF"));
-                    }
-                    AppendConsole("[App] Connected to Viper Biometric Key (USB).");
-                    ShowNotification("Connected via USB.");
+                    TxtServiceStatus.Text = "Direct USB Mode";
+                    TxtServiceStatus.Foreground = new SolidColorBrush(Color.Parse("#60CDFF"));
                 }
+                AppendConsole("[App] Connected to Viper Biometric Key (USB).");
+                ShowNotification("Connected via USB.");
             }
             else
             {

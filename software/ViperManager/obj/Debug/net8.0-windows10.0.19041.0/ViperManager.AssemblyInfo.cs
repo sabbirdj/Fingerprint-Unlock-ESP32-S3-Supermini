@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ViperManager")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+20cc47de4b80b90782abb6a2c9fe9c59546abf5a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ea526c1cfbfd1fbb5f689a6bff1015b1c75526fa")]
 [assembly: System.Reflection.AssemblyProductAttribute("ViperManager")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ViperManager")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

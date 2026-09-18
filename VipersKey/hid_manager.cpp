@@ -158,12 +158,6 @@ void HIDManager::sendBleKey(uint8_t modifier, uint8_t keycode) {
 void HIDManager::sendBleString(const String& str, bool pressEnter) {
     if (!_inputReport || !_bleConnected) return;
 
-    if (pressEnter) {
-        // Safe lock screen wake: Escape key dismisses lock wallpaper without typing characters
-        sendBleKey(0, 0x29); // Escape key (HID 0x29)
-        delay(500); // Wait for Windows password field to focus
-    }
-
     // Type password keystrokes with solid BLE connection intervals
     for (size_t i = 0; i < str.length(); i++) {
         uint8_t mod = 0;
@@ -189,12 +183,6 @@ void HIDManager::typeString(const String& str, bool pressEnter) {
 
     // 2. Otherwise fallback to native USB typing if USB is enumerated
     if (isUsbReady()) {
-        if (pressEnter) {
-            // Safe lock screen wake: Escape key dismisses lock wallpaper without typing characters
-            _usbKeyboard.write(KEY_ESC);
-            delay(500); // Wait for Windows password field to focus
-        }
-
         // Type the password with small delays so Windows never drops keystrokes
         for (size_t i = 0; i < str.length(); i++) {
             _usbKeyboard.write(str[i]);
