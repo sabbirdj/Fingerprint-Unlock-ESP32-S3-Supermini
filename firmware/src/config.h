@@ -6,9 +6,9 @@
 // Hardware Pin Definitions (ESP32-S3 Super Mini)
 // ==========================================
 // ZW111 UART connection (HardwareSerial 1)
-#define ZW111_RX_PIN        4   // ESP32 RX (connect to ZW111 TX)
-#define ZW111_TX_PIN        5   // ESP32 TX (connect to ZW111 RX)
-#define ZW111_WAKE_PIN      1   // ESP32 RTC Wakeup (connect to ZW111 Touch Out)
+#define ZW111_RX_PIN        44   // ESP32 physical 'RX' pin (connect to Sensor TX)
+#define ZW111_TX_PIN        43   // ESP32 physical 'TX' pin (connect to Sensor RX)
+#define ZW111_WAKE_PIN      1    // ESP32 RTC Wakeup (connect to ZW111 Touch Out)
 
 // ZW111 Default Baud Rate
 #define ZW111_BAUD_RATE     57600

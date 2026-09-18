@@ -1,0 +1,2 @@
+C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\ViperManager.pdb
+C:\Users\SHAHNAWAZ\Documents\antigravity\clever-maxwell\software\ViperManager\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\ViperManager.exe

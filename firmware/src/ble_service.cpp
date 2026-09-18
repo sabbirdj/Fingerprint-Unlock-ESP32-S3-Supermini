@@ -3,12 +3,21 @@
 class ServerCallbacks : public NimBLEServerCallbacks {
 public:
     ServerCallbacks(BleManager* mgr, HIDManager* hid) : _mgr(mgr), _hid(hid) {}
-    void onConnect(NimBLEServer* pServer) override {
+    void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
+        Serial.println("[BLE] Client connected!");
         if (_hid) _hid->setBleConnected(true);
     }
-    void onDisconnect(NimBLEServer* pServer) override {
+    void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) override {
+        Serial.printf("[BLE] Client disconnected (reason: %d). Restarting advertising...\n", reason);
         if (_hid) _hid->setBleConnected(false);
+        extern bool guardActive;
+        extern bool isWindowsLocked;
+        guardActive = false;
+        isWindowsLocked = true;
         NimBLEDevice::startAdvertising();
+    }
+    void onAuthenticationComplete(NimBLEConnInfo& connInfo) override {
+        Serial.println("[BLE] Pairing & Authentication successful!");
     }
 private:
     BleManager* _mgr;
@@ -18,7 +27,7 @@ private:
 class OsSyncCallbacks : public NimBLECharacteristicCallbacks {
 public:
     OsSyncCallbacks(BleManager* mgr) : _mgr(mgr) {}
-    void onWrite(NimBLECharacteristic* pChar) override {
+    void onWrite(NimBLECharacteristic* pChar, NimBLEConnInfo& connInfo) override {
         std::string val = pChar->getValue();
         // Forward to manager
     }
@@ -29,13 +38,26 @@ private:
 BleManager::BleManager(StorageManager& storage, ZW111& sensor, HIDManager& hid)
     : _storage(storage), _sensor(sensor), _hid(hid) {}
 
+void BleManager::setCommandCallback(BleCommandCallback cb) {
+    _cmdCallback = cb;
+}
+
 void BleManager::begin() {
     NimBLEDevice::init(BLE_DEVICE_NAME);
-    NimBLEDevice::setPower(ESP_PWR_LVL_P9); // Max power
-    NimBLEDevice::setSecurityAuth(true, true, true);
+    NimBLEDevice::setPower(9); // Max power (+9 dBm)
+    NimBLEDevice::setMTU(512); // High MTU for SSH keys and bulk responses
+
+    // Configure security for Windows 10/11 "Just Works" pairing & bonding
+    NimBLEDevice::setSecurityAuth(true, false, true); // Bonding=true, MITM=false, SC=true
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+    NimBLEDevice::setSecurityInitKey(BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID);
+    NimBLEDevice::setSecurityRespKey(BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID);
 
     _pServer = NimBLEDevice::createServer();
     _pServer->setCallbacks(new ServerCallbacks(this, &_hid));
+
+    // Initialize BLE HID Device & Keyboard Characteristics
+    _pHidDev = _hid.setupBleHid(_pServer);
 
     // Custom Management Service
     NimBLEService* pService = _pServer->createService(BLE_SERVICE_UUID);
@@ -43,14 +65,14 @@ void BleManager::begin() {
     // OS Sync Characteristic
     _pOsChar = pService->createCharacteristic(
         CHAR_OS_SYNC_UUID,
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
     );
     _pOsChar->setCallbacks(new NimBLECharacteristicCallbacks());
 
-    // Vault Configuration Characteristic
+    // Vault Configuration & Command Characteristic
     _pVaultChar = pService->createCharacteristic(
         CHAR_VAULT_UUID,
-        NIMBLE_PROPERTY::WRITE
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
     );
 
     // Fingerprint Enrollment Characteristic
@@ -65,28 +87,45 @@ void BleManager::begin() {
         NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
     );
 
-    pService->start();
-
-    // Start Advertising
+    // Setup Advertising for Windows 10/11 Bluetooth Keyboard Discovery
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
-    pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
-    pAdvertising->setAppearance(0x03C1); // Generic Keyboard
+    pAdvertising->setAppearance(0x03C1); // HID_KEYBOARD
+
+    NimBLEAdvertisementData advData;
+    advData.setFlags(0x06); // General Discoverable + BR/EDR not supported
+    advData.setAppearance(0x03C1); // HID Keyboard
+    advData.addServiceUUID(NimBLEUUID((uint16_t)0x1812)); // HID Service UUID
+    pAdvertising->setAdvertisementData(advData);
+
+    NimBLEAdvertisementData scanData;
+    scanData.setName(BLE_DEVICE_NAME); // "Viper's Biometric Key"
+    pAdvertising->setScanResponseData(scanData);
+
     pAdvertising->start();
+    Serial.println("[BLE] Bluetooth HID Keyboard & Management Service initialized and advertising.");
 }
 
 void BleManager::loop() {
     // 1. Process incoming OS Sync write
     if (_pOsChar && _pOsChar->getValue().length() > 0) {
         std::string val = _pOsChar->getValue();
-        handleOsSync(String(val.c_str()));
         _pOsChar->setValue("");
+        handleOsSync(String(val.c_str()));
     }
 
-    // 2. Process incoming Vault commands
+    // 2. Process incoming Vault & Central Management commands
     if (_pVaultChar && _pVaultChar->getValue().length() > 0) {
         std::string cmd = _pVaultChar->getValue();
-        handleVaultCommand(String(cmd.c_str()));
         _pVaultChar->setValue("");
+        String cmdStr = String(cmd.c_str());
+        cmdStr.trim();
+        if (cmdStr.length() > 0) {
+            if (_cmdCallback) {
+                _cmdCallback(cmdStr);
+            } else {
+                handleVaultCommand(cmdStr);
+            }
+        }
     }
 
     // 3. Process incoming Enroll commands
@@ -122,6 +161,24 @@ void BleManager::handleOsSync(const String& data) {
     } else if (data.equalsIgnoreCase("MAC") || data.equalsIgnoreCase("MACOS")) {
         _storage.setActiveOS(OS_MACOS);
         notifyStatus("ACTIVE_OS:MACOS");
+    } else if (data.equalsIgnoreCase("LOCK") || data.equalsIgnoreCase("CMD:LOCK")) {
+        extern bool isWindowsLocked;
+        extern bool guardActive;
+        extern uint32_t lastGuardHeartbeat;
+        isWindowsLocked = true;
+        guardActive = true;
+        lastGuardHeartbeat = millis();
+        notifyStatus("GUARD:LOCKED");
+        Serial.println("[BLE] Guard ARMED via BLE - typing ENABLED");
+    } else if (data.equalsIgnoreCase("UNLOCK") || data.equalsIgnoreCase("CMD:UNLOCK")) {
+        extern bool isWindowsLocked;
+        extern bool guardActive;
+        extern uint32_t lastGuardHeartbeat;
+        isWindowsLocked = false;
+        guardActive = true;
+        lastGuardHeartbeat = millis();
+        notifyStatus("GUARD:UNLOCKED");
+        Serial.println("[BLE] Guard DISARMED via BLE - typing BLOCKED");
     }
 }
 

@@ -1,6 +1,6 @@
 #include "hid_manager.h"
 
-// Standard HID Keyboard Report Descriptor
+// Standard 101-Key HID Keyboard Report Descriptor with LED Output Report
 static const uint8_t hidReportDescriptor[] = {
     0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
     0x09, 0x06,                    // USAGE (Keyboard)
@@ -16,7 +16,16 @@ static const uint8_t hidReportDescriptor[] = {
     0x81, 0x02,                    //   INPUT (Data,Var,Abs)
     0x95, 0x01,                    //   REPORT_COUNT (1)
     0x75, 0x08,                    //   REPORT_SIZE (8)
-    0x81, 0x03,                    //   INPUT (Cnst,Var,Abs)
+    0x81, 0x01,                    //   INPUT (Cnst,Ary,Abs)
+    0x95, 0x05,                    //   REPORT_COUNT (5)
+    0x75, 0x01,                    //   REPORT_SIZE (1)
+    0x05, 0x08,                    //   USAGE_PAGE (LEDs)
+    0x19, 0x01,                    //   USAGE_MINIMUM (Num Lock)
+    0x29, 0x05,                    //   USAGE_MAXIMUM (Kana)
+    0x91, 0x02,                    //   OUTPUT (Data,Var,Abs)
+    0x95, 0x01,                    //   REPORT_COUNT (1)
+    0x75, 0x03,                    //   REPORT_SIZE (3)
+    0x91, 0x01,                    //   OUTPUT (Cnst,Ary,Abs)
     0x95, 0x06,                    //   REPORT_COUNT (6)
     0x75, 0x08,                    //   REPORT_SIZE (8)
     0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
@@ -36,6 +45,18 @@ void HIDManager::begin() {
     USB.begin();
 }
 
+NimBLEHIDDevice* HIDManager::setupBleHid(NimBLEServer* pServer) {
+    NimBLEHIDDevice* pHid = new NimBLEHIDDevice(pServer);
+    pHid->setReportMap((uint8_t*)hidReportDescriptor, sizeof(hidReportDescriptor));
+    pHid->setManufacturer("ViperKey");
+    pHid->setPnp(0x02, 0xe502, 0xa111, 0x0210);
+    pHid->setHidInfo(0x00, 0x03);
+    pHid->setBatteryLevel(100);
+    _inputReport = pHid->getInputReport(1);
+    pHid->getOutputReport(1);
+    return pHid;
+}
+
 bool HIDManager::isUsbReady() {
     return USB;
 }
@@ -46,6 +67,14 @@ bool HIDManager::isBleConnected() {
 
 void HIDManager::setBleConnected(bool connected) {
     _bleConnected = connected;
+}
+
+void HIDManager::pressKey(uint8_t key) {
+    if (_bleConnected) {
+        sendBleKey(0, key);
+    } else if (isUsbReady()) {
+        _usbKeyboard.write(key);
+    }
 }
 
 uint8_t HIDManager::asciiToHid(char c, uint8_t* modifier) {
@@ -65,6 +94,8 @@ uint8_t HIDManager::asciiToHid(char c, uint8_t* modifier) {
         return 0x28; // Enter
     } else if (c == '\t') {
         return 0x2B; // Tab
+    } else if (c == '\b') {
+        return 0x2A; // Backspace
     }
 
     // Special shifted characters
@@ -115,18 +146,19 @@ void HIDManager::sendBleKey(uint8_t modifier, uint8_t keycode) {
 
     // Report: [modifier, reserved, key1, key2, key3, key4, key5, key6]
     uint8_t report[8] = {modifier, 0, keycode, 0, 0, 0, 0, 0};
-    _inputReport->setValue(report, sizeof(report));
-    _inputReport->notify();
-    delay(10);
+    _inputReport->notify(report, sizeof(report));
+    delay(35);
 
     // Release key
     uint8_t releaseReport[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    _inputReport->setValue(releaseReport, sizeof(releaseReport));
-    _inputReport->notify();
-    delay(10);
+    _inputReport->notify(releaseReport, sizeof(releaseReport));
+    delay(25);
 }
 
 void HIDManager::sendBleString(const String& str, bool pressEnter) {
+    if (!_inputReport || !_bleConnected) return;
+
+    // Type password keystrokes with solid BLE connection intervals
     for (size_t i = 0; i < str.length(); i++) {
         uint8_t mod = 0;
         uint8_t key = asciiToHid(str[i], &mod);
@@ -134,23 +166,33 @@ void HIDManager::sendBleString(const String& str, bool pressEnter) {
             sendBleKey(mod, key);
         }
     }
+
+    // Submit password
     if (pressEnter) {
+        delay(120);
         sendBleKey(0, 0x28); // Enter key
     }
 }
 
 void HIDManager::typeString(const String& str, bool pressEnter) {
-    // 1. If USB is plugged in and ready, prioritize native USB typing
-    if (isUsbReady()) {
-        _usbKeyboard.print(str);
-        if (pressEnter) {
-            _usbKeyboard.write(KEY_RETURN);
-        }
+    // 1. If Bluetooth is actively connected, prioritize Bluetooth typing
+    if (_bleConnected) {
+        sendBleString(str, pressEnter);
         return;
     }
 
-    // 2. Otherwise type over Bluetooth BLE
-    if (_bleConnected) {
-        sendBleString(str, pressEnter);
+    // 2. Otherwise fallback to native USB typing if USB is enumerated
+    if (isUsbReady()) {
+        // Type the password with small delays so Windows never drops keystrokes
+        for (size_t i = 0; i < str.length(); i++) {
+            _usbKeyboard.write(str[i]);
+            delay(25);
+        }
+
+        // Press Enter to submit
+        if (pressEnter) {
+            delay(120);
+            _usbKeyboard.write(KEY_RETURN);
+        }
     }
 }

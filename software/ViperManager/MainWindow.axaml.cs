@@ -81,14 +81,37 @@ public partial class MainWindow : Window
             }
         };
 
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
+        }
+
         // Refresh ports on launch
         RefreshPorts();
 
         Closed += (s, e) =>
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
+            }
             _guardHeartbeatTimer.Stop();
             _device.Dispose();
         };
+    }
+
+    private void OnSessionSwitch(object sender, Microsoft.Win32.SessionSwitchEventArgs e)
+    {
+        if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionLock)
+        {
+            _isWindowsLocked = true;
+            _device.SendCommand("CMD:LOCK");
+        }
+        else if (e.Reason == Microsoft.Win32.SessionSwitchReason.SessionUnlock)
+        {
+            _isWindowsLocked = false;
+            _device.SendCommand("CMD:UNLOCK");
+        }
     }
 
     #region Window Dragging

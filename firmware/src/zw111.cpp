@@ -8,7 +8,7 @@ ZW111::ZW111(HardwareSerial& serial, uint8_t rxPin, uint8_t txPin, uint8_t wakeP
     : _serial(serial), _rxPin(rxPin), _txPin(txPin), _wakePin(wakePin) {}
 
 bool ZW111::begin(uint32_t baud) {
-    pinMode(_wakePin, INPUT);
+    pinMode(_wakePin, INPUT_PULLDOWN);
     _serial.begin(baud, SERIAL_8N1, _rxPin, _txPin);
     delay(100);
     return verifyPassword();
@@ -148,7 +148,7 @@ uint8_t ZW111::image2Tz(uint8_t slot) {
 }
 
 uint8_t ZW111::createModel() {
-    uint8_t cmd = 0x03; // RegModel
+    uint8_t cmd = 0x05; // RegModel
     sendPacket(PID_COMMAND, &cmd, 1);
     uint8_t reply[8];
     uint16_t len = sizeof(reply);
@@ -156,7 +156,7 @@ uint8_t ZW111::createModel() {
 }
 
 uint8_t ZW111::storeModel(uint8_t slot, uint16_t id) {
-    uint8_t payload[4] = {0x05, slot, (uint8_t)(id >> 8), (uint8_t)(id & 0xFF)};
+    uint8_t payload[4] = {0x06, slot, (uint8_t)(id >> 8), (uint8_t)(id & 0xFF)}; // StoreChar
     sendPacket(PID_COMMAND, payload, 4);
     uint8_t reply[8];
     uint16_t len = sizeof(reply);
@@ -203,41 +203,52 @@ int16_t ZW111::scanAndMatch(uint16_t maxSlots) {
 }
 
 bool ZW111::enrollFingerprint(uint16_t slotId, std::function<void(const char*)> progressCb) {
-    setLed(LED_BREATHING, LED_BLUE, 50, 0);
-
-    // Step 1: First scan
-    if (progressCb) progressCb("PLACE_FINGER");
-    uint32_t tStart = millis();
-    while (getImage() != ZW111_OK) {
-        if (millis() - tStart > 10000) return false;
-        delay(50);
+    const int stages = 6;
+    
+    for (int i = 1; i <= stages; i++) {
+        setLed(LED_BREATHING, LED_BLUE, 50, 0);
+        
+        if (progressCb) {
+            char msg[32];
+            snprintf(msg, sizeof(msg), "PLACE_FINGER_%d_OF_%d", i, stages);
+            progressCb(msg);
+        }
+        
+        uint32_t tStart = millis();
+        while (getImage() != ZW111_OK) {
+            if (millis() - tStart > 15000) return false;
+            delay(50);
+        }
+        
+        delay(250); // Let finger settle
+        getImage();
+        
+        uint8_t bufferId = (i == 1) ? 1 : 2;
+        if (image2Tz(bufferId) != ZW111_OK) {
+            if (progressCb) progressCb("IMAGE_CONVERT_FAIL");
+            setLed(LED_FLASHING, LED_RED, 20, 3);
+            return false;
+        }
+        
+        if (i > 1) {
+            if (createModel() != ZW111_OK) {
+                if (progressCb) progressCb("MISMATCH_FAIL");
+                setLed(LED_FLASHING, LED_RED, 20, 3);
+                return false;
+            }
+        }
+        
+        setLed(LED_FLASHING, LED_BLUE, 20, 2);
+        
+        if (i < stages) {
+            if (progressCb) progressCb("LIFT_FINGER");
+            setLed(LED_ON, LED_YELLOW);
+            while (getImage() == ZW111_OK) {
+                delay(50);
+            }
+        }
     }
-    if (image2Tz(1) != ZW111_OK) return false;
-    setLed(LED_FLASHING, LED_BLUE, 20, 2);
-
-    // Step 2: Lift finger
-    if (progressCb) progressCb("LIFT_FINGER");
-    delay(1000);
-    while (getImage() == ZW111_OK) {
-        delay(100);
-    }
-
-    // Step 3: Second scan
-    if (progressCb) progressCb("PLACE_AGAIN");
-    tStart = millis();
-    while (getImage() != ZW111_OK) {
-        if (millis() - tStart > 10000) return false;
-        delay(50);
-    }
-    if (image2Tz(2) != ZW111_OK) return false;
-
-    // Step 4: RegModel & Store
-    if (createModel() != ZW111_OK) {
-        if (progressCb) progressCb("MISMATCH_FAIL");
-        setLed(LED_FLASHING, LED_RED, 20, 3);
-        return false;
-    }
-
+    
     if (storeModel(1, slotId) != ZW111_OK) {
         if (progressCb) progressCb("STORE_FAIL");
         setLed(LED_FLASHING, LED_RED, 20, 3);
